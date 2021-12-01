@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - glTF 2.0 - compressed</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<!-- <link type="text/css" rel="stylesheet" href="main.css"> -->
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+	</head>
+
+	<body>
+		<div id="info">
+			<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - GLTFLoader + compression extensions<br />
+			<a href="https://sketchfab.com/3d-models/coffeemat-7fb196a40a6e4697aad9ca2f75c8b33d" target="_blank" rel="noopener">Coffeemat</a> by
+			<a href="https://sketchfab.com/OFFcours1" target="_blank" rel="noopener">Roman Red</a>
+		</div>
+
+		<div class="container">
+			<div class="row">
+				<button type="button" name="button" id="izquierda">Izquierda</button>
+				<button type="button" name="button" id="derecha">Derecha</button>
+				<button type="button" name="button" id="obtener">Obtener</button>
+			</div>
+
+			<div class="row">
+				<div class="col-sm-5" id="planeta" style="width: 1200px; height: 1200px">
+
+				</div>
+			</div>
+		</div>
+
+
+
+
+
+	</body>
+
+	<script type="module">
+
+		import * as THREE from '../build/three.module.js';
+
+		import { RoomEnvironment } from './jsm/environments/RoomEnvironment.js';
+		import { OrbitControls } from './jsm/controls/OrbitControls.js';
+		import { GLTFLoader } from './jsm/loaders/GLTFLoader.js';
+
+
+		import { RGBELoader } from './jsm/loaders/RGBELoader.js';
+
+		let camera, scene, renderer, controls;
+
+		var posicion_tierra = 0;
+
+		init();
+		render();
+		// cambiar();
+
+		function init() {
+
+			// const container = document.createElement( 'div' );
+			// document.body.appendChild( container );
+
+			var tamaño_cuadro = 800;
+
+			renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( tamaño_cuadro, tamaño_cuadro );
+			renderer.toneMapping = THREE.ACESFilmicToneMapping;
+			renderer.toneMappingExposure = 1;
+			// renderer.outputEncoding = THREE.sRGBEncoding;
+			renderer.setClearColor( 0x000000, 0 ); // fondo transarente
+			$("#planeta").append(renderer.domElement);
+			// container.appendChild( renderer.domElement );
+
+			camera = new THREE.PerspectiveCamera( 45, tamaño_cuadro / tamaño_cuadro, 1, 3000 );
+			camera.position.set( -133, 100, 100 );
+			// camera.lookAt(scene.position);
+			camera.lookAt(new THREE.Vector3(0,0,0));
+
+			const environment = new RoomEnvironment();
+			const pmremGenerator = new THREE.PMREMGenerator( renderer );
+
+			scene = new THREE.Scene();
+
+			// scene.background = new THREE.Color( 0xbbbbbb ); // color gris de fondo
+			scene.environment = pmremGenerator.fromScene( environment ).texture;
+
+			const grid = new THREE.GridHelper( 500, 10, 0xbbbbbb, 0xbbbbbb );
+			grid.material.opacity = 0.5;
+			grid.material.depthWrite = false;
+			grid.material.transparent = true;
+			// scene.add( grid ); //añadir grid
+
+			const ambientLight = new THREE.AmbientLight( 0xcccccc, 1.7 );
+
+			scene.add( ambientLight );
+
+
+			new RGBELoader()
+					.setPath( '' )
+					.load( 'nubes.hdr', function ( texture ) {
+
+						texture.mapping = THREE.EquirectangularRefractionMapping;
+
+						// scene.background = texture;
+						scene.environment = texture;
+
+						render();
+
+						const loader = new GLTFLoader().setPath( 'mundo/' );
+
+						loader.load( 'mundo_nuevo.gltf', function ( gltf ) {
+
+							gltf.scene.position.y = 25;
+							gltf.scene.scale.set( 1, 1, 1 );
+
+
+							var model = gltf.scene;
+
+							scene.add( model );
+
+
+							render();
+						} );
+
+
+					} );
+
+
+			controls = new OrbitControls( camera, renderer.domElement );
+			controls.addEventListener( 'change', render ); // use if there is no animation loop
+			controls.minDistance = 100;
+			controls.maxDistance = 1000;
+			controls.target.set( 0, 90, 0 );
+			controls.autoRotate=true
+			controls.autoRotateSpeed *= -0.5;
+			controls.update();
+			window.addEventListener( 'resize', onWindowResize );
+
+
+			// scene.add( new THREE.AxesHelper( 300 ) );
+			//
+			// const helper = new THREE.CameraHelper( camera );
+			// scene.add( helper );
+
+		}
+
+		function onWindowResize() {
+
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+
+			render();
+
+		}
+
+		//
+
+		function render() {
+
+			renderer.render( scene, camera );
+
+		}
+
+		function girar(cual){
+			console.log(cual);
+
+			var from = {
+						x: camera.position.x,
+						y: camera.position.y,
+						z: camera.position.z
+				};
+
+				console.log(from);
+
+			switch (cual) {
+				case 0:
+				console.log("entra 1");
+					var to = {
+							x: 400,
+							y: 100,
+							z: 0
+					};
+					break;
+
+				case 1:
+					var to = {
+							x: 200,
+							y: 100,
+							z: -300
+					};
+					break;
+
+				case 2:
+					var to = {
+							x: -276,
+							y: 100,
+							z: -300
+					};
+					break;
+
+				case 3:
+					var to = {
+							x: -330,
+							y: 100,
+							z: 180
+					}
+					break;
+
+				case 4:
+					var to = {
+							x: 200,
+							y: 100,
+							z: 330
+					};
+					break;
+
+				default:
+					break;
+			}
+
+			console.log(to);
+
+			var tween = new TWEEN.Tween(camera.position).to(to, 1000).start();
+			// controls.update();
+
+					// .onUpdate(function () {
+					//   camera.position.set(this.x, this.y, this.z);
+					//   camera.lookAt(new THREE.Vector3(0, 0, 0));
+					// })
+					//
+					// .onComplete(function () {
+					// 	camera.lookAt(new THREE.Vector3(0, 0, 0));
+					// })
+
+					// .start();
+
+		}
+		animate();
+
+		function animate() {
+			requestAnimationFrame(animate);
+			TWEEN.update();
+			// renderer.render(scene, camera);
+			controls.update();
+		}
+
+		$("#izquierda").click(function() {
+
+			posicion_tierra--;
+
+			if(posicion_tierra < 0){
+				girar(4);
+				posicion_tierra = 4;
+			}else {
+				girar(posicion_tierra);
+			}
+
+		});
+
+		$("#derecha").click(function() {
+
+			posicion_tierra++;
+
+			if(posicion_tierra == 5){
+				girar(0);
+				posicion_tierra = 0;
+			}else {
+				girar(posicion_tierra);
+			}
+
+		});
+
+		$("#obtener").click(function() {
+			console.log(camera.position);
+		});
+
+
+	</script>
+
+
+</html>
